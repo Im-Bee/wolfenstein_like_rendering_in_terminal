@@ -540,9 +540,14 @@ mod game_logic {
     use std::f32::consts::PI;
     use std::time::{Duration, Instant};
     use crate::points_distance;
-    use crate::terminal::output::{DASH_CHAR, AT_CHAR, BLACK_BOX_CHAR, STRIP_BOX_CHAR};
+    use crate::terminal::output::{
+        DASH_CHAR, 
+        AT_CHAR, 
+        BLACK_BOX_CHAR, 
+        STRIP_BOX_CHAR};
     use crate::{
-        terminal::{input::keys, output::Renderer},
+        terminal::{
+            input::keys, output::Renderer},
         Vec2};
 
     const TICK_DURATION: Duration = Duration::from_millis(600);
@@ -584,15 +589,15 @@ mod game_logic {
             let new_map = Map {
                 topography: 
                     [
-                      1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
-                      1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-                      1, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-                      1, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-                      1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 
-                      1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 
-                      1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 
-                      1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 
-                      1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 
+                      1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+                      1, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+                      1, 0, 0, 1, 1, 0, 0, 1, 0, 0,
+                      1, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+                      1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 
+                      1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 
+                      1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 
+                      1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 
+                      1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 
                       1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 
                     ]
                     .to_vec(),
@@ -731,7 +736,7 @@ mod game_logic {
                     // Its bottom
                     else {
                         a = self.current_map.sqare_width - current_square_relative_pos.y;
-                        o = current_ray_pitch.tan() * a;
+                        o = (current_ray_pitch + PI).tan() * a;
 
                         y_res = Vec2 {
                             x: current_ray_pos.x - o,
@@ -745,7 +750,7 @@ mod game_logic {
                     // Decide should we calculate right or left ray for the x axis
 
                     // Its right 
-                    if self.main_player.pitch < PI && self.main_player.pitch > 0. {
+                    if current_ray_pitch < PI && current_ray_pitch > 0. {
                         a = self.current_map.sqare_width - current_square_relative_pos.x;
                         o = (current_ray_pitch - HALF_PI).tan() * a;
 
@@ -769,58 +774,48 @@ mod game_logic {
                         hit_on_f_x = false;
                     }
 
-
+                    // Decide which result is correct and fits in boundries
                     if y_res.x >= current_left_top_square_pos.x &&
                         y_res.x <= current_left_top_square_pos.x + self.current_map.sqare_width {
-                            output.draw_line(
-                                current_ray_pos,
-                                y_res,
-                                DASH_CHAR);
+                            // output.draw_line(
+                            //     current_ray_pos,
+                            //     y_res,
+                            //     DASH_CHAR);
 
                             // output.draw_dot(y_res, BLACK_BOX_CHAR);
-                            
-                            if hit_on_f_y { 
-                                y_res.y -= 0.2;
-                            }
-                            else {
-                                y_res.y += 0.2;
-                            }
-                            if hit_on_f_x { 
-                                x_res.x += 0.2;
-                            }
-                            else {
-                                x_res.x -= 0.2;
-                            }
                             current_ray_pos = y_res;
                             hit_on_x_axis = false;
                     }
                     else {
-                        output.draw_line(
-                            current_ray_pos,
-                            x_res,
-                            DASH_CHAR);
+                        // output.draw_line(
+                        //     current_ray_pos,
+                        //     x_res,
+                        //     DASH_CHAR);
 
                         // output.draw_dot(x_res, BLACK_BOX_CHAR);
-                        if hit_on_f_y { 
-                            y_res.y -= 0.2;
-                        }
-                        else {
-                            y_res.y += 0.2;
-                        }
-                        if hit_on_f_x { 
-                            x_res.x += 0.2;
-                        }
-                        else {
-                            x_res.x -= 0.2;
-                        }
                         current_ray_pos = x_res;
                         hit_on_x_axis = true;
+                    } 
+                    
+                    // Jump over square border
+                    if hit_on_f_y { 
+                        current_ray_pos.y -= 0.2;
+                    }
+                    else {
+                        current_ray_pos.y += 0.2;
+                    }
+                    if hit_on_f_x { 
+                        current_ray_pos.x += 0.2;
+                    }
+                    else {
+                        current_ray_pos.x -= 0.2;
                     }
                 }
 
                 ray_distance = points_distance(self.main_player.position, current_ray_pos).ceil();
+                ray_distance -= (((output.get_screen_dim().x as f32 / 2.) - ray_line) * RADIAN).abs();
                     
-                // Hit same ray for dx amount
+                // Hit the same ray for dx amount
                 for i in 0..(dx + 1.) as i32 {
                     if !hit_on_x_axis {
                         output.draw_line(
@@ -848,7 +843,7 @@ mod game_logic {
                 ray_distance);
 
         }
-    
+
         #[inline]
         fn calculate_current_square(
             &mut self,
