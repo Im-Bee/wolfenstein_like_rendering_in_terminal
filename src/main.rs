@@ -699,7 +699,8 @@ mod game_logic {
                 }
                 current_ray_pos = self.main_player.position;
 
-                for _ in 0..self.max_visible_distance {
+                for i in 0..self.max_visible_distance {
+
                     // Check in which square we are
                     let current_square = self.calculate_current_square(current_ray_pos);
 
@@ -811,6 +812,9 @@ mod game_logic {
                         current_ray_pos.x -= 0.2;
                     }
                 }
+                
+                ray_line += dx;
+                current_ray_pitch += RADIAN;
 
                 ray_distance = points_distance(self.main_player.position, current_ray_pos).ceil();
                 ray_distance -= (((output.get_screen_dim().x as f32 / 2.) - ray_line) * RADIAN).abs();
@@ -830,10 +834,6 @@ mod game_logic {
                             STRIP_BOX_CHAR);
                     }
                 }
-                
-                ray_line += dx;
-
-                current_ray_pitch += RADIAN;
             }
 
             println!(
