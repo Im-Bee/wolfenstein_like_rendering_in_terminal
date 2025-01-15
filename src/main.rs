@@ -33,7 +33,7 @@ mod terminal {
 
         pub const CHAR_EMPTY: u8 = ' ' as u8;
         pub const BLACK_BOX_CHAR: u8 = 178;
-        pub const STRIP_BOX_CHAR: u8 = 'A' as u8;
+        pub const STRIP_BOX_CHAR: u8 = '-' as u8;
         pub const AT_CHAR: u8 = '@' as u8;
         pub const DASH_CHAR: u8 = '-' as u8;
 
@@ -559,22 +559,27 @@ mod game_logic {
     const DEGREE: f32 = 57.29578;
     const RADIAN: f32 = 0.01745329;
 
-    pub enum view_mode {
-        mode_2d,
-        mode_3d,
-        mode_2d_and_3d,
+    pub enum ViewMode {
+        Mode2d,
+        Mode3d,
+        Mode2dAnd3d,
     }
 
     pub struct Game {
         ticks: Instant,
         current_map: Map,
-        main_player: Actor,
+        main_player: MainPlayer,
         camera: Camera,
     }
 
     struct Actor {
         position: Vec2<f32>,
         pitch: f32,
+        movement_speed: f32,
+    }
+
+    struct MainPlayer {
+        actor: Actor,
     }
 
     struct Map {
@@ -591,24 +596,27 @@ mod game_logic {
 
     impl Game {
         pub fn new() -> Game {
-            let new_main_player = Actor {
-                position: Vec2 { x: 50., y: 70. },
-                pitch: 11.44 * RADIAN,
+            let new_main_player = MainPlayer {
+                actor: Actor {
+                    position: Vec2 { x: 50., y: 70. },
+                    pitch: 11.44 * RADIAN,
+                    movement_speed: 2.5,
+                }
             };
             
             let new_map = Map {
                 topography: 
                     [
-                      1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
-                      1, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-                      1, 0, 0, 1, 1, 0, 0, 1, 0, 0,
-                      1, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-                      1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                      1, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                      1, 0, 0, 1, 1, 0, 0, 0, 0, 1,
+                      1, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                      1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 
+                      1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 
+                      1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 
+                      1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 
+                      1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 
                       1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 
-                      1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 
-                      1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 
-                      1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 
-                      1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 
                     ]
                     .to_vec(),
                 topography_y: 10,
@@ -617,8 +625,8 @@ mod game_logic {
             };
 
             let new_camera = Camera {
-                max_visible_distance: 7,
-                fov: 60.,
+                max_visible_distance: 15,
+                fov: 90.,
             };
 
             Game {
@@ -633,7 +641,7 @@ mod game_logic {
             &mut self,
             output: &mut Renderer,
             input: keys::KEY,
-            mode: view_mode) {
+            mode: ViewMode) {
 
             let t = Instant::now();
             let dt = (t - self.ticks).as_millis() / TICK_DURATION.as_millis();
@@ -641,250 +649,209 @@ mod game_logic {
                 self.ticks = t;
             }
             
-            if input == keys::KEY_W {
-                self.main_player.position.y += 1.;
-            }
-            
-            if input == keys::KEY_S {
-                self.main_player.position.y -= 1.;
-            }
-            
-            if input == keys::KEY_A {
-                self.main_player.position.x -= 1.;
-            }
-            
-            if input == keys::KEY_D {
-                self.main_player.position.x += 1.;
-            }
-            
-            if input == keys::KEY_E {
-                self.main_player.pitch += PLAYER_ROTATION_SPEED;
-            }
-            
-            if input == keys::KEY_Q {
-                self.main_player.pitch -= PLAYER_ROTATION_SPEED;
-            }
+            if input != keys::KEY_UP {
 
-            if self.main_player.pitch > TWO_PI {
-                self.main_player.pitch = 0.;
-            }
-            if self.main_player.pitch < 0. {
-                self.main_player.pitch = TWO_PI;
-            }
+                let mut top_left = self.main_player.actor.position;
+                let mut pitch = self.main_player.actor.pitch;
 
-            self.calculate_and_draw(output, mode);
+                top_left.x -= self.main_player.actor.movement_speed / 2.;
+                top_left.y -= self.main_player.actor.movement_speed / 2.;
+
+                if input == keys::KEY_W {
+                    let hit = cast_ray(
+                        &self.main_player.actor.position, 
+                        &pitch,
+                        &top_left, 
+                        &self.main_player.actor.movement_speed, 
+                        &self.main_player.actor.movement_speed);
+
+                    self.main_player.actor.position = hit.0;
+                }
+                    
+                if input == keys::KEY_D {
+                    pitch = normalize_angle(pitch + HALF_PI);
+
+                    let hit = cast_ray(
+                        &self.main_player.actor.position, 
+                        &pitch,
+                        &top_left, 
+                        &self.main_player.actor.movement_speed, 
+                        &self.main_player.actor.movement_speed);
+
+                    self.main_player.actor.position = hit.0;
+                }
+
+                if input == keys::KEY_S {
+                    pitch = normalize_angle(pitch + PI);
+
+                    let hit = cast_ray(
+                        &self.main_player.actor.position, 
+                        &pitch,
+                        &top_left, 
+                        &self.main_player.actor.movement_speed, 
+                        &self.main_player.actor.movement_speed);
+
+                    self.main_player.actor.position = hit.0;
+                }
+
+                if input == keys::KEY_A {
+                    pitch = normalize_angle(pitch + PI + HALF_PI);
+
+                    let hit = cast_ray(
+                        &self.main_player.actor.position, 
+                        &pitch,
+                        &top_left, 
+                        &self.main_player.actor.movement_speed, 
+                        &self.main_player.actor.movement_speed);
+
+                    self.main_player.actor.position = hit.0;
+                }
+
+                if input == keys::KEY_E {
+                    self.main_player.actor.pitch += PLAYER_ROTATION_SPEED;
+                }
+
+                if input == keys::KEY_Q {
+                    self.main_player.actor.pitch -= PLAYER_ROTATION_SPEED;
+                }
+
+                self.main_player.actor.pitch = normalize_angle(self.main_player.actor.pitch);
+            }
+            
+            self.calculate_and_draw(output, &mode);
 
             println!(
                 "PITCH: {:03.4} | COORD: [x: {:02.04}, y: {:02.04}]",
-                self.main_player.pitch,
-                self.main_player.position.x,
-                self.main_player.position.y);
+                self.main_player.actor.pitch,
+                self.main_player.actor.position.x,
+                self.main_player.actor.position.y);
         }
 
         fn calculate_and_draw(
             &mut self,
             output: &mut Renderer,
-            mode: view_mode) {
+            mode: &ViewMode) {
         
-            let error = 0.05;
-
             let mut current_ray_pos: Vec2::<f32>;
-            let mut current_ray_pitch = self.main_player.pitch - (self.camera.fov / 2. * RADIAN);
+            let mut current_ray_pitch = self.main_player.actor.pitch - (self.camera.fov / 2. * RADIAN);
             
-            let mut ray_line = -1.;
+            // Preallocate variables for calculations
+            let mut ray_line = 0.;
             let dx = output.get_screen_dim().x as f32 / self.camera.fov;
             let dy = output.get_screen_dim().y as f32 / (self.camera.max_visible_distance as f32 * self.current_map.sqare_width);
-            let mut hit_on_x_axis: bool = false;
-            let mut hit_on_f_y: bool;
-            let mut hit_on_f_x: bool;
-
-            // Preallocate variables for calculations
-            let mut a: f32;
-            let mut o: f32;
-            let mut y_res: Vec2<f32> = Vec2 { x: (-1.), y: (-1.) };
-            let mut x_res: Vec2<f32> = Vec2 { x: (-1.), y: (-1.) };
-            let mut ray_distance: f32 = -1.;
-
+            let mut which_axis: Axis = Axis::OnX;
+            let mut ray_distance: f32;
 
             for _ in 0..(self.camera.fov as i32) {
-                if current_ray_pitch < 0. {
-                    current_ray_pitch = TWO_PI + current_ray_pitch;
-                }
-                if current_ray_pitch > TWO_PI {
-                    current_ray_pitch = TWO_PI - current_ray_pitch;
-                }
-                current_ray_pos = self.main_player.position;
+                current_ray_pos = self.main_player.actor.position;
+                current_ray_pitch = normalize_angle(current_ray_pitch);
 
                 for _ in 0..self.camera.max_visible_distance {
                     // Check in which square we are
                     let current_square = self.calculate_current_square(current_ray_pos);
 
-                    let topography_index = self.current_map.topography_x as usize * current_square.y as usize + current_square.x as usize; 
+                    let topography_index = (self.current_map.topography_x * current_square.y + current_square.x) as usize; 
                     if topography_index >= self.current_map.topography.len() || 
                         self.current_map.topography[topography_index] == 1 {
                             // Hit!
                             break;
                     }
 
-                    let current_left_top_square_pos = Vec2::<f32> {
+                    let current_top_left_of_square = Vec2::<f32> {
                         x: current_square.x as f32 * self.current_map.sqare_width,
                         y: current_square.y as f32 * self.current_map.sqare_width,
                     };
-                    let current_square_relative_pos = Vec2::<f32> {
-                        x: current_ray_pos.x as f32 - current_left_top_square_pos.x,
-                        y: current_ray_pos.y as f32 - current_left_top_square_pos.y,
-                    };
-
-                    // Decide should we calculate top or bottom ray for the y axis
-
-                    // Its top
-                    if !(current_ray_pitch > HALF_PI && current_ray_pitch < PI + HALF_PI) {
-                        a = current_square_relative_pos.y;
-                        o = current_ray_pitch.tan() * a;
-
-                        y_res = Vec2 {
-                            x: current_ray_pos.x + o,
-                            y: current_ray_pos.y - current_square_relative_pos.y,
-                        };
-
-                        hit_on_f_y = true;
-                    }
-                    // Its bottom
-                    else {
-                        a = self.current_map.sqare_width - current_square_relative_pos.y;
-                        o = (current_ray_pitch + PI).tan() * a;
-
-                        y_res = Vec2 {
-                            x: current_ray_pos.x - o,
-                            y: current_ray_pos.y - current_square_relative_pos.y + self.current_map.sqare_width,
-                        };
-
-                        hit_on_f_y = false;
-                    }
-
-
-                    // Decide should we calculate right or left ray for the x axis
-
-                    // Its right 
-                    if current_ray_pitch < PI && current_ray_pitch > 0. {
-                        a = self.current_map.sqare_width - current_square_relative_pos.x;
-                        o = (current_ray_pitch - HALF_PI).tan() * a;
-
-                        x_res = Vec2 {
-                            x: current_ray_pos.x - current_square_relative_pos.x + self.current_map.sqare_width,
-                            y: current_ray_pos.y + o,
-                        };
-
-                        hit_on_f_x = true;
-                    }
-                    // Its left
-                    else {
-                        a = current_square_relative_pos.x;
-                        o = (current_ray_pitch - PI - HALF_PI).tan() * a;
-
-                        x_res = Vec2 {
-                            x: current_ray_pos.x - current_square_relative_pos.x,
-                            y: current_ray_pos.y - o,
-                        };
-
-                        hit_on_f_x = false;
-                    }
-
-                    // Decide which result is correct and fits in boundries
-                    if y_res.x >= current_left_top_square_pos.x &&
-                        y_res.x <= current_left_top_square_pos.x + self.current_map.sqare_width {
-                            current_ray_pos = y_res;
-                            hit_on_x_axis = false;
-                    }
-                    else {
-                        current_ray_pos = x_res;
-                        hit_on_x_axis = true;
-                    } 
                     
-                    // Jump over square border
-                    if hit_on_f_y { 
-                        current_ray_pos.y -= error;
-                    }
-                    else {
-                        current_ray_pos.y += error;
-                    }
-                    if hit_on_f_x { 
-                        current_ray_pos.x += error;
-                    }
-                    else {
-                        current_ray_pos.x -= error;
-                    }
+                    let hit = cast_ray(
+                        &current_ray_pos,
+                        &current_ray_pitch,
+                        &current_top_left_of_square,
+                        &self.current_map.sqare_width,
+                        &self.current_map.sqare_width);
+
+                    current_ray_pos = hit.0;
+                    which_axis = hit.1;
                 }
                 
                 ray_line += dx;
                 current_ray_pitch += RADIAN;
-                
+            
                 match mode {
-                    view_mode::mode_2d => {
-                        if !hit_on_x_axis {
-                            output.draw_line(
-                                self.main_player.position,
-                                y_res,
-                                BLACK_BOX_CHAR);
-
-                            // output.draw_dot(y_res, BLACK_BOX_CHAR);
-                        }
-                        else {
-                            output.draw_line(
-                                self.main_player.position,
-                                x_res,
-                                DASH_CHAR);
-
-                            // output.draw_dot(x_res, BLACK_BOX_CHAR);
-                        }
-                    }
-
-                    view_mode::mode_3d => {
-                        ray_distance = points_distance(self.main_player.position, current_ray_pos).ceil();
-
-                        // Hit the same ray for dx amount
-                        for i in 0..(dx + 1.) as i32 {
-                            if !hit_on_x_axis {
+                    ViewMode::Mode2d => {
+                        match which_axis {
+                            Axis::OnX => {
                                 output.draw_line(
-                                    Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy)) },
-                                    Vec2 { x: (ray_line + i as f32), y: (output.get_screen_dim().y as f32 * 1.15 - (ray_distance * dy)) },
+                                    self.main_player.actor.position,
+                                    current_ray_pos,
                                     BLACK_BOX_CHAR);
                             }
-                            else {
+                            Axis::OnY => {
                                 output.draw_line(
-                                    Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy)) },
-                                    Vec2 { x: (ray_line + i as f32), y: (output.get_screen_dim().y as f32 * 1.15 - (ray_distance * dy)) },
+                                    self.main_player.actor.position,
+                                    current_ray_pos,
                                     STRIP_BOX_CHAR);
                             }
                         }
+                        // output.draw_dot(y_res, BLACK_BOX_CHAR);
                     }
 
-                    view_mode::mode_2d_and_3d => { 
-                        ray_distance = points_distance(self.main_player.position, current_ray_pos).ceil();
+                    ViewMode::Mode3d => {
+                        ray_distance = points_distance(self.main_player.actor.position, current_ray_pos).ceil();
 
                         // Hit the same ray for dx amount
                         for i in 0..(dx + 1.) as i32 {
-                            if !hit_on_x_axis {
-                                output.draw_line(
-                                    self.main_player.position,
-                                    y_res,
-                                    BLACK_BOX_CHAR);
-
-                                output.draw_line(
-                                    Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy)) },
-                                    Vec2 { x: (ray_line + i as f32), y: (output.get_screen_dim().y as f32 * 1.15 - (ray_distance * dy)) },
-                                    BLACK_BOX_CHAR);
+                            let up = Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy) * 1.2) };
+                            let down = Vec2 { x: (ray_line + i as f32), y: (1.8 * (output.get_screen_dim().y as f32 - (ray_distance * dy))) };
+    
+                            if up.y > down.y {
+                                break;
                             }
-                            else { 
-                                output.draw_line(
-                                    self.main_player.position,
-                                    x_res,
-                                    DASH_CHAR);
-                                
-                                output.draw_line(
-                                    Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy)) },
-                                    Vec2 { x: (ray_line + i as f32), y: (output.get_screen_dim().y as f32 * 1.15 - (ray_distance * dy)) },
-                                    STRIP_BOX_CHAR);
+
+                            match which_axis {
+                                Axis::OnX => {
+                                    output.draw_line(
+                                        up,
+                                        down,
+                                        BLACK_BOX_CHAR);
+                                }
+
+                                Axis::OnY => {
+                                    output.draw_line(
+                                        up,
+                                        down,
+                                        STRIP_BOX_CHAR);
+                                }
+                            }
+                        }
+                    }
+
+                    ViewMode::Mode2dAnd3d => { 
+                        ray_distance = points_distance(self.main_player.actor.position, current_ray_pos).ceil();
+
+                        // Hit the same ray for dx amount
+                        for i in 0..(dx + 1.) as i32 {
+                            match which_axis {
+                                Axis::OnX => {
+                                    output.draw_line(
+                                        Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy)) },
+                                        Vec2 { x: (ray_line + i as f32), y: (output.get_screen_dim().y as f32 * 1.15 - (ray_distance * dy)) },
+                                        BLACK_BOX_CHAR);
+                                    output.draw_line(
+                                        self.main_player.actor.position,
+                                        current_ray_pos,
+                                        BLACK_BOX_CHAR);
+                                }
+
+                                Axis::OnY => {
+                                    output.draw_line(
+                                        Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy)) },
+                                        Vec2 { x: (ray_line + i as f32), y: (output.get_screen_dim().y as f32 * 1.15 - (ray_distance * dy)) },
+                                        STRIP_BOX_CHAR);
+                                    output.draw_line(
+                                        self.main_player.actor.position,
+                                        current_ray_pos,
+                                        STRIP_BOX_CHAR);
+                                }
                             }
                         }
                     }
@@ -902,6 +869,127 @@ mod game_logic {
             }
         }
     }
+
+    enum Axis {
+        OnX,
+        OnY,
+    }
+
+    fn normalize_angle(mut angle: f32) -> f32 {
+        while angle < 0. {
+            angle += TWO_PI;
+        }
+        while angle > TWO_PI {
+            angle -= TWO_PI;
+        }
+        angle
+    }
+
+    fn cast_ray(
+        starting_pos: &Vec2<f32>,
+        pitch: &f32,
+        boundry_top_left: &Vec2<f32>,
+        x_boundry: &f32,
+        y_boundry: &f32) -> (Vec2<f32>, Axis) {
+
+        let error = 0.05;
+
+        // Preallocate variables
+        let mut a: f32;
+        let mut o: f32;
+        let y_res: Vec2<f32>;
+        let x_res: Vec2<f32>;
+        let mut final_pos: Vec2<f32>;
+        let final_axis: Axis;
+        let hit_on_f_y: bool;
+        let hit_on_f_x: bool;
+
+        let current_relative_pos = Vec2::<f32> {
+            x: starting_pos.x - boundry_top_left.x,
+            y: starting_pos.y - boundry_top_left.y,
+        };
+
+        // Decide should we calculate top or bottom ray for the y axis
+
+        // Its top
+        if !(*pitch > HALF_PI && *pitch < PI + HALF_PI) {
+            a = current_relative_pos.y;
+            o = pitch.tan() * a;
+
+            y_res = Vec2 {
+                x: starting_pos.x + o,
+                y: starting_pos.y - current_relative_pos.y,
+            };
+
+            hit_on_f_y = true;
+        }
+        // Its bottom
+        else {
+            a = y_boundry - current_relative_pos.y;
+            o = (pitch + PI).tan() * a;
+
+            y_res = Vec2 {
+                x: starting_pos.x - o,
+                y: starting_pos.y - current_relative_pos.y + y_boundry,
+            };
+
+            hit_on_f_y = false;
+        }
+
+        // Decide should we calculate right or left ray for the x axis
+
+        // Its right 
+        if *pitch < PI && *pitch > 0. {
+            a = x_boundry - current_relative_pos.x;
+            o = (pitch - HALF_PI).tan() * a;
+
+            x_res = Vec2 {
+                x: starting_pos.x - current_relative_pos.x + x_boundry,
+                y: starting_pos.y + o,
+            };
+
+            hit_on_f_x = true;
+        }
+        // Its left
+        else {
+            a = current_relative_pos.x;
+            o = (pitch - PI - HALF_PI).tan() * a;
+
+            x_res = Vec2 {
+                x: starting_pos.x - current_relative_pos.x,
+                y: starting_pos.y - o,
+            };
+
+            hit_on_f_x = false;
+        }
+
+        // Decide which result is correct and fits in boundries
+        if y_res.x >= boundry_top_left.x &&
+            y_res.x <= boundry_top_left.x + x_boundry {
+                final_pos = y_res;
+                final_axis = Axis::OnY;
+        }
+        else {
+            final_pos = x_res;
+            final_axis = Axis::OnX;
+        } 
+
+        // Jump over square border
+        if hit_on_f_y { 
+            final_pos.y -= error;
+        }
+        else {
+            final_pos.y += error;
+        }
+        if hit_on_f_x { 
+            final_pos.x += error;
+        }
+        else {
+            final_pos.x -= error;
+        }
+
+        return (final_pos, final_axis);
+    }
 }
 
 fn main() {
@@ -918,7 +1006,7 @@ fn main() {
         game.update(
             &mut render,
             input.get_key(),
-            game_logic::view_mode::mode_3d);
+            game_logic::ViewMode::Mode3d);
 
         render.render();
 
