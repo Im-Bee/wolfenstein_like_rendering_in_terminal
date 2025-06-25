@@ -1,22 +1,32 @@
 #[derive(Copy, Clone)]
-struct Vec2<T> {
+struct Vec2<T> 
+{
     x: T,
     y: T,
 }
 
-impl core::fmt::Display for Vec2<f32> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Vec2<f32> 
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result 
+    {
         write!(f, "[{}, {}]", self.x, self.y)
     }
 }
 
-fn points_distance(pos1: Vec2<f32>, pos2: Vec2<f32>) -> f32 {
+
+
+fn points_distance(pos1: Vec2<f32>, pos2: Vec2<f32>) -> f32 
+{
     ((pos2.x - pos1.x).powf(2.) + (pos2.y - pos1.y).powf(2.)).sqrt()
 }
 
+
+
 #[cfg(windows)]
-mod windows_errors {
-    pub fn get_last_error() -> u32 {
+mod windows_errors 
+{
+    pub fn get_last_error() -> u32 
+    {
         use winapi::um::errhandlingapi::GetLastError;
         
         unsafe { 
@@ -25,30 +35,37 @@ mod windows_errors {
     }
 }
 
-mod terminal {
-    pub mod output {
+
+
+mod terminal 
+{
+    pub mod output 
+    {
         use crate::Vec2;
         use std::{mem::swap, usize};
 
-        pub const CHAR_EMPTY: u8 = ' ' as u8;
+        pub const CHAR_EMPTY:     u8 = ' ' as u8;
         pub const BLACK_BOX_CHAR: u8 = '@' as u8;
         pub const STRIP_BOX_CHAR: u8 = '-' as u8;
-        pub const AT_CHAR: u8 = '@' as u8;
-        pub const DASH_CHAR: u8 = '-' as u8;
+        pub const AT_CHAR:        u8 = '@' as u8;
+        pub const DASH_CHAR:      u8 = '-' as u8;
 
         type Screen = Vec<u8>;
 
         const FRONT_INDEX: usize = 0;
-        const BACK_INDEX: usize = 1;
+        const BACK_INDEX:  usize = 1;
 
-        pub struct Renderer {
+        pub struct Renderer 
+        {
             screen_dimensions: Vec2<i16>,
             swap_chain: Vec<Screen>,
         }
 
-        impl Renderer {
-            pub fn new() -> Renderer {
-                let mut r = Renderer { 
+        impl Renderer 
+        {
+            pub fn new() -> Renderer 
+            {
+                let mut r = Renderer {
                     screen_dimensions: (Vec2 { x: (-1), y: (-1) }),
                     swap_chain: (Vec::new())
                 };
@@ -59,10 +76,9 @@ mod terminal {
                 return r;
             }
 
-            pub fn draw_point_unnormalized(
-                &mut self,
-                pos: Vec2<i32>,
-                ch: u8) {
+            pub fn draw_point_unnormalized(&mut self,
+                                           pos: Vec2<i32>,
+                                           ch: u8) {
 
                 if !self.check_if_in_boundries(pos) {
                     return;
@@ -495,11 +511,10 @@ mod terminal {
                     tcsetattr(0, TCSANOW, std::ptr::addr_of!(new_term) as *mut termios);   
                 }
     
-                let d = timeval { tv_sec: (0), tv_usec: (0) };
-                let fds = nix::sys::select::FdSet::new();
-                spawn(move || {
-                       
-                });
+                // let d = timeval { tv_sec: (0), tv_usec: (0) };
+                // let fds = nix::sys::select::FdSet::new();
+                // spawn(move || {
+                // });
             }
 
             #[cfg(windows)]
