@@ -518,7 +518,8 @@ mod terminal
             }
 
             #[cfg(windows)]
-            fn create_input_thread(&mut self) {
+            fn create_input_thread(&mut self) 
+            {
                 use winapi::shared::windef::HWND;
                 use winapi::shared::windef::POINT;
                 use winapi::um::winuser::MSG;
@@ -541,14 +542,15 @@ mod terminal
 
                     let hook_id = set_up_kb_hook();
 
-                    loop {
+                    loop 
+                    {
                         unsafe {
-                            if PeekMessageA(
-                                &mut msg,
-                                -1_i32 as HWND,
-                                0,
-                                0,
-                                PM_REMOVE  | PM_QS_INPUT) == 0 {
+                            if PeekMessageA(&mut msg,
+                                            -1_i32 as HWND,
+                                            0,
+                                            0,
+                                            PM_REMOVE  | PM_QS_INPUT) == 0 
+                            {
                                 key_clone.store(_KEY, Ordering::Relaxed);
                             }
                         }
@@ -563,14 +565,17 @@ mod terminal
             }
         }
 
-        impl Drop for Hook {
-            fn drop(&mut self) {
+        impl Drop for Hook 
+        {
+            fn drop(&mut self) 
+            {
                 self.end();
                 clean_up();
             }
         }
 
-        pub fn clean_up() {
+        pub fn clean_up() 
+        {
             // let mut f = String::new();
             // let _x = std::io::stdin().read_line(&mut f);
         }
@@ -579,7 +584,8 @@ mod terminal
         const WH_KEYBOARD_LL: i32 = 13;
 
         #[cfg(windows)]
-        fn set_up_kb_hook() -> winapi::shared::windef::HHOOK {
+        fn set_up_kb_hook() -> winapi::shared::windef::HHOOK 
+        {
             use winapi::um::winuser::SetWindowsHookExA;
 
             #[expect(unused_assignments)]
@@ -597,7 +603,6 @@ mod terminal
                         GetLastError() returned {err_code}", 
                         err_code = crate::windows_errors::get_last_error());
                 }
-
             }
 
             return r;
@@ -607,10 +612,10 @@ mod terminal
         static mut _KEY: keys::KEY = keys::KEY_UP;
 
         #[cfg(windows)]
-        unsafe extern "system" fn windows_ll_hook(
-            code: i32, 
-            w_param: usize, 
-            l_param: isize) -> isize {
+        unsafe extern "system" fn windows_ll_hook(code: i32, 
+                                                  w_param: usize, 
+                                                  l_param: isize) -> isize 
+        {
             use winapi::um::winuser::CallNextHookEx;
             use winapi::um::winuser::KBDLLHOOKSTRUCT;
             use winapi::um::winuser::WM_KEYDOWN;
@@ -621,7 +626,7 @@ mod terminal
             if w_param == WM_KEYDOWN as usize {
                 _KEY = kbd.vkCode;
             }
-            else if w_param == WM_KEYUP as usize {
+            if w_param == WM_KEYUP as usize {
                 _KEY = keys::KEY_UP;
             }
 
@@ -629,21 +634,23 @@ mod terminal
         }
 
         #[cfg(windows)]
-        fn end_kb_hook(hk: HHOOK) {
+        fn end_kb_hook(hk: HHOOK) 
+        {
             use winapi::um::winuser::UnhookWindowsHookEx;
 
             unsafe {
                 if UnhookWindowsHookEx(hk) == 0 {
-                    panic!("Couldn't unhook keyboard hook in winapi, \
-                        GetLastError() returned {err_code}", 
-                        err_code = crate::windows_errors::get_last_error());
+                    panic!("Couldn't unhook keyboard hook in winapi,"
+                           "GetLastError() returned {err_code}", 
+                           err_code = crate::windows_errors::get_last_error());
                 }
             }
         }
     }
 }
 
-mod game_logic {
+mod game_logic 
+{
     use std::usize;
     use std::f32::consts::PI;
     use std::time::{Duration, Instant};
@@ -667,47 +674,55 @@ mod game_logic {
     const DEGREE: f32 = 57.29578;
     const RADIAN: f32 = 0.01745329;
 
-    pub enum ViewMode {
+    pub enum ViewMode 
+    {
         Mode2d,
         Mode3d,
         Mode2dAnd3d,
     }
 
-    pub struct Game {
+    pub struct Game 
+    {
         ticks: Instant,
         current_map: Map,
         main_player: MainPlayer,
         camera: Camera,
     }
 
-    struct Actor {
+    struct Actor 
+    {
         position: Vec2<f32>,
-        pitch: f32,
+        yaw: f32,
         movement_speed: f32,
     }
 
-    struct MainPlayer {
+    struct MainPlayer 
+    {
         actor: Actor,
     }
 
-    struct Map {
+    struct Map 
+    {
         topography: Vec<i32>,
         sqare_width: f32,
         topography_y: i32,
         topography_x: i32,
     }
 
-    struct Camera {
+    struct Camera
+    {
         max_visible_distance: i32,
         fov: f32,
     }
 
-    impl Game {
-        pub fn new() -> Game {
+    impl Game 
+    {
+        pub fn new() -> Game 
+        {
             let new_main_player = MainPlayer {
                 actor: Actor {
                     position: Vec2 { x: 50., y: 70. },
-                    pitch: 11.44 * RADIAN,
+                    yaw: 11.44 * RADIAN,
                     movement_speed: 2.5,
                 }
             };
@@ -745,43 +760,42 @@ mod game_logic {
             }
         }
 
-        pub fn update(
-            &mut self,
-            output: &mut Renderer,
-            input: keys::KEY,
-            mode: ViewMode) {
-
+        pub fn update(&mut self,
+                      output: &mut Renderer,
+                      input: keys::KEY,
+                      mode: ViewMode) 
+        {
             let t = Instant::now();
             let dt = (t - self.ticks).as_millis() / TICK_DURATION.as_millis();
             if dt >= 1 {
                 self.ticks = t;
             }
             
-            if input != keys::KEY_UP {
-
+            if input != keys::KEY_UP 
+            {
                 let mut top_left = self.main_player.actor.position;
-                let mut pitch = self.main_player.actor.pitch;
+                let mut yaw = self.main_player.actor.yaw;
 
                 top_left.x -= self.main_player.actor.movement_speed / 2.;
                 top_left.y -= self.main_player.actor.movement_speed / 2.;
 
                 if input == keys::KEY_W {
-                    let hit = cast_ray(
-                        &self.main_player.actor.position, 
-                        &pitch,
-                        &top_left, 
-                        &self.main_player.actor.movement_speed, 
-                        &self.main_player.actor.movement_speed);
+                    let hit = cast_ray(&self.main_player.actor.position, 
+                                       &yaw,
+                                       &top_left, 
+                                       &self.main_player.actor.movement_speed, 
+                                       &self.main_player.actor.movement_speed);
 
                     self.main_player.actor.position = hit.0;
                 }
                     
-                if input == keys::KEY_D {
-                    pitch = normalize_angle(pitch + HALF_PI);
+                if input == keys::KEY_D 
+                {
+                    yaw = normalize_angle(yaw + HALF_PI);
 
                     let hit = cast_ray(
                         &self.main_player.actor.position, 
-                        &pitch,
+                        &yaw,
                         &top_left, 
                         &self.main_player.actor.movement_speed, 
                         &self.main_player.actor.movement_speed);
@@ -789,12 +803,13 @@ mod game_logic {
                     self.main_player.actor.position = hit.0;
                 }
 
-                if input == keys::KEY_S {
-                    pitch = normalize_angle(pitch + PI);
+                if input == keys::KEY_S 
+                {
+                    yaw = normalize_angle(yaw + PI);
 
                     let hit = cast_ray(
                         &self.main_player.actor.position, 
-                        &pitch,
+                        &yaw,
                         &top_left, 
                         &self.main_player.actor.movement_speed, 
                         &self.main_player.actor.movement_speed);
@@ -802,12 +817,13 @@ mod game_logic {
                     self.main_player.actor.position = hit.0;
                 }
 
-                if input == keys::KEY_A {
-                    pitch = normalize_angle(pitch + PI + HALF_PI);
+                if input == keys::KEY_A 
+                {
+                    yaw = normalize_angle(yaw + PI + HALF_PI);
 
                     let hit = cast_ray(
                         &self.main_player.actor.position, 
-                        &pitch,
+                        &yaw,
                         &top_left, 
                         &self.main_player.actor.movement_speed, 
                         &self.main_player.actor.movement_speed);
@@ -816,32 +832,30 @@ mod game_logic {
                 }
 
                 if input == keys::KEY_E {
-                    self.main_player.actor.pitch += PLAYER_ROTATION_SPEED;
+                    self.main_player.actor.yaw += PLAYER_ROTATION_SPEED;
                 }
 
                 if input == keys::KEY_Q {
-                    self.main_player.actor.pitch -= PLAYER_ROTATION_SPEED;
+                    self.main_player.actor.yaw -= PLAYER_ROTATION_SPEED;
                 }
 
-                self.main_player.actor.pitch = normalize_angle(self.main_player.actor.pitch);
+                self.main_player.actor.yaw = normalize_angle(self.main_player.actor.yaw);
             }
             
             self.calculate_and_draw(output, &mode);
 
-            println!(
-                "PITCH: {:03.4} | COORD: [x: {:02.04}, y: {:02.04}]",
-                self.main_player.actor.pitch,
-                self.main_player.actor.position.x,
-                self.main_player.actor.position.y);
+            println!("PITCH: {:03.4} | COORD: [x: {:02.04}, y: {:02.04}]",
+                     self.main_player.actor.yaw,
+                     self.main_player.actor.position.x,
+                     self.main_player.actor.position.y);
         }
 
-        fn calculate_and_draw(
-            &mut self,
-            output: &mut Renderer,
-            mode: &ViewMode) {
-        
+        fn calculate_and_draw(&mut self,
+                              output: &mut Renderer,
+                              mode: &ViewMode) 
+        {
             let mut current_ray_pos: Vec2::<f32>;
-            let mut current_ray_pitch = self.main_player.actor.pitch - (self.camera.fov / 2. * RADIAN);
+            let mut current_ray_angle = self.main_player.actor.yaw - (self.camera.fov / 2. * RADIAN);
             
             // Preallocate variables for calculations
             let mut ray_line = 0.;
@@ -850,11 +864,13 @@ mod game_logic {
             let mut which_axis: Axis = Axis::OnX;
             let mut ray_distance: f32;
 
-            for _ in 0..(self.camera.fov as i32) {
+            for _ in 0..(self.camera.fov as i32) 
+            {
                 current_ray_pos = self.main_player.actor.position;
-                current_ray_pitch = normalize_angle(current_ray_pitch);
+                current_ray_angle = normalize_angle(current_ray_angle);
 
-                for _ in 0..self.camera.max_visible_distance {
+                for _ in 0..self.camera.max_visible_distance 
+                {
                     // Check in which square we are
                     let current_square = self.calculate_current_square(current_ray_pos);
 
@@ -870,21 +886,21 @@ mod game_logic {
                         y: current_square.y as f32 * self.current_map.sqare_width,
                     };
                     
-                    let hit = cast_ray(
-                        &current_ray_pos,
-                        &current_ray_pitch,
-                        &current_top_left_of_square,
-                        &self.current_map.sqare_width,
-                        &self.current_map.sqare_width);
+                    let hit = cast_ray(&current_ray_pos,
+                                       &current_ray_angle,
+                                       &current_top_left_of_square,
+                                       &self.current_map.sqare_width,
+                                       &self.current_map.sqare_width);
 
                     current_ray_pos = hit.0;
                     which_axis = hit.1;
                 }
                 
                 ray_line += dx;
-                current_ray_pitch += RADIAN;
+                current_ray_angle += RADIAN;
             
-                match mode {
+                match mode 
+                {
                     ViewMode::Mode2d => {
                         match which_axis {
                             Axis::OnX => {
@@ -907,8 +923,9 @@ mod game_logic {
                         ray_distance = points_distance(self.main_player.actor.position, current_ray_pos).ceil();
 
                         // Hit the same ray for dx amount
-                        for i in 0..(dx + 1.) as i32 {
-                            let up   = Vec2 { 
+                        for i in 0..(dx + 1.) as i32 
+                        {
+                            let up = Vec2 { 
                                 x: (ray_line + i as f32),
                                 y: (0. + (ray_distance * dy)) 
                             };
@@ -922,7 +939,8 @@ mod game_logic {
                                 break;
                             }
 
-                            match which_axis {
+                            match which_axis 
+                            {
                                 Axis::OnX => {
                                     output.draw_line(
                                         up,
@@ -944,8 +962,10 @@ mod game_logic {
                         ray_distance = points_distance(self.main_player.actor.position, current_ray_pos).ceil();
 
                         // Hit the same ray for dx amount
-                        for i in 0..(dx + 1.) as i32 {
-                            match which_axis {
+                        for i in 0..(dx + 1.) as i32 
+                        {
+                            match which_axis 
+                            {
                                 Axis::OnX => {
                                     output.draw_line(
                                         Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy)) },
@@ -975,9 +995,9 @@ mod game_logic {
         }
 
         #[inline]
-        fn calculate_current_square(
-            &mut self,
-            pos: Vec2<f32>) -> Vec2<i32> {
+        fn calculate_current_square(&mut self,
+                                    pos: Vec2<f32>) -> Vec2<i32> 
+        {
             Vec2::<i32> {
                 x: (pos.x / self.current_map.sqare_width).floor() as i32,
                 y: (pos.y / self.current_map.sqare_width).floor() as i32,
@@ -985,12 +1005,14 @@ mod game_logic {
         }
     }
 
-    enum Axis {
+    enum Axis 
+    {
         OnX,
         OnY,
     }
 
-    fn normalize_angle(mut angle: f32) -> f32 {
+    fn normalize_angle(mut angle: f32) -> f32 
+    {
         while angle < 0. {
             angle += TWO_PI;
         }
@@ -1000,13 +1022,12 @@ mod game_logic {
         angle
     }
 
-    fn cast_ray(
-        starting_pos: &Vec2<f32>,
-        pitch: &f32,
-        boundry_top_left: &Vec2<f32>,
-        x_boundry: &f32,
-        y_boundry: &f32) -> (Vec2<f32>, Axis) {
-
+    fn cast_ray(starting_pos: &Vec2<f32>,
+                angle: &f32,
+                boundry_top_left: &Vec2<f32>,
+                x_boundry: &f32,
+                y_boundry: &f32) -> (Vec2<f32>, Axis) 
+    {
         let error = 0.05;
 
         // Preallocate variables
@@ -1027,9 +1048,10 @@ mod game_logic {
         // Decide should we calculate top or bottom ray for the y axis
 
         // Its top
-        if !(*pitch > HALF_PI && *pitch < PI + HALF_PI) {
+        if !(*angle > HALF_PI && *angle < PI + HALF_PI) 
+        {
             a = current_relative_pos.y;
-            o = pitch.tan() * a;
+            o = angle.tan() * a;
 
             y_res = Vec2 {
                 x: starting_pos.x + o,
@@ -1039,9 +1061,10 @@ mod game_logic {
             hit_on_f_y = true;
         }
         // Its bottom
-        else {
+        else 
+        {
             a = y_boundry - current_relative_pos.y;
-            o = (pitch + PI).tan() * a;
+            o = (angle + PI).tan() * a;
 
             y_res = Vec2 {
                 x: starting_pos.x - o,
@@ -1054,9 +1077,10 @@ mod game_logic {
         // Decide should we calculate right or left ray for the x axis
 
         // Its right 
-        if *pitch < PI && *pitch > 0. {
+        if *angle < PI && *angle > 0. 
+        {
             a = x_boundry - current_relative_pos.x;
-            o = (pitch - HALF_PI).tan() * a;
+            o = (angle - HALF_PI).tan() * a;
 
             x_res = Vec2 {
                 x: starting_pos.x - current_relative_pos.x + x_boundry,
@@ -1066,9 +1090,10 @@ mod game_logic {
             hit_on_f_x = true;
         }
         // Its left
-        else {
+        else 
+        {
             a = current_relative_pos.x;
-            o = (pitch - PI - HALF_PI).tan() * a;
+            o = (angle - PI - HALF_PI).tan() * a;
 
             x_res = Vec2 {
                 x: starting_pos.x - current_relative_pos.x,
@@ -1096,6 +1121,7 @@ mod game_logic {
         else {
             final_pos.y += error;
         }
+
         if hit_on_f_x { 
             final_pos.x += error;
         }
@@ -1107,7 +1133,8 @@ mod game_logic {
     }
 }
 
-fn main() {
+fn main() 
+{
     use std::thread::sleep;
     use std::time::Duration;
     
@@ -1115,13 +1142,13 @@ fn main() {
     let mut render = terminal::output::Renderer::new();
     let mut game = game_logic::Game::new();
 
-    loop {
+    loop 
+    {
         sleep(Duration::from_millis(50));
         render.update();
-        game.update(
-            &mut render,
-            69,
-            game_logic::ViewMode::Mode3d);
+        game.update(&mut render,
+                    70,
+                    game_logic::ViewMode::Mode3d);
 
         render.render();
 
