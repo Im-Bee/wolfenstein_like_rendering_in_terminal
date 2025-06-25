@@ -28,11 +28,10 @@ mod windows_errors {
 mod terminal {
     pub mod output {
         use crate::Vec2;
-        use core::ptr::null_mut;
         use std::{mem::swap, usize};
 
         pub const CHAR_EMPTY: u8 = ' ' as u8;
-        pub const BLACK_BOX_CHAR: u8 = 178;
+        pub const BLACK_BOX_CHAR: u8 = '@' as u8;
         pub const STRIP_BOX_CHAR: u8 = '-' as u8;
         pub const AT_CHAR: u8 = '@' as u8;
         pub const DASH_CHAR: u8 = '-' as u8;
@@ -280,9 +279,51 @@ mod terminal {
                     x: 0,
                     y: 0,
                 });
+
+                println!("{} {}", self.get_screen_dim().x, self.get_screen_dim().y);
             }
         }
         
+        #[cfg(unix)]
+        pub fn get_dimensions() -> Vec2<i16> {
+            use nix::libc::{winsize, ioctl, STDOUT_FILENO, TIOCGWINSZ};
+
+            let mut r: Vec2<i16> = Vec2 { x: 0, y: 0 };
+
+            unsafe {
+                let win: winsize = winsize { ws_row: (0), ws_col: (0), ws_xpixel: (0), ws_ypixel: (0) };
+
+                let res = ioctl(STDOUT_FILENO, TIOCGWINSZ, &win as *const winsize);
+                if res == 0 {
+                    r.y = win.ws_row as i16;
+                    r.x = win.ws_col as i16;
+                }
+                else {
+                    panic!("get_dimensions() unix");
+                }
+            }
+
+            return r;
+        }
+
+        #[cfg(unix)]
+        pub fn set_cursor_position(dim: Vec2<i16>) {
+            use nix::libc::c_int;
+            use std::io::{stdout, Write};
+            
+            print!("\x1B[{};{}H", (dim.y + 1) as c_int, (dim.x + 1) as c_int); 
+            stdout().flush().unwrap();
+        }
+
+        #[cfg(unix)]
+        pub fn output_array(arr_ptr: *const u8, arr_size: i16) {
+            use nix::libc::{c_void, write};
+            use std::{io::stdout, os::unix::io::AsRawFd};
+            
+            let stdout = stdout().as_raw_fd();
+            unsafe { write(stdout, arr_ptr as *const c_void, arr_size as usize); }
+        }
+
         #[cfg(windows)]
         pub fn get_dimensions() -> Vec2<i16> {
             use winapi::um::processenv::GetStdHandle;
@@ -369,8 +410,22 @@ mod terminal {
         use std::sync::Arc;
         use std::sync::atomic;
         use std::ptr::null_mut;
+        use nix::libc::termios;
         use std::thread::spawn;
-        use winapi::shared::windef::HHOOK;
+
+        #[cfg(unix)]
+        pub mod keys {
+            pub type KEY = u32;
+
+            pub const KEY_X: KEY = 88;
+            pub const KEY_E: KEY = 69;
+            pub const KEY_Q: KEY = 81;
+            pub const KEY_W: KEY = 87;
+            pub const KEY_S: KEY = 83;
+            pub const KEY_A: KEY = 65;
+            pub const KEY_D: KEY = 68;
+            pub const KEY_UP: KEY = 0;
+        }
 
         #[cfg(windows)]
         pub mod keys {
@@ -384,6 +439,18 @@ mod terminal {
             pub const KEY_A: KEY = 65;
             pub const KEY_D: KEY = 68;
             pub const KEY_UP: KEY = 0;
+        }
+
+        #[cfg(unix)]
+        static mut OG_ATTR: nix::libc::termios = termios { c_iflag: (0), c_line: (0), c_oflag: (0), c_lflag: (0), c_ispeed: (0), c_cflag: (0), c_ospeed: (0), c_cc: ([0 as u8; 32])};
+            
+        #[cfg(unix)]
+        extern "C" fn reset_term() {
+            use nix::libc::{ tcsetattr, TCSANOW };
+
+            unsafe {
+                tcsetattr(0, TCSANOW, std::ptr::addr_of!(OG_ATTR) as *mut termios);   
+            }
         }
 
         pub struct Hook {
@@ -410,6 +477,32 @@ mod terminal {
                 self.key.load(Ordering::Relaxed)
             }
 
+            #[cfg(unix)]
+            fn create_input_thread(&mut self) {
+                use nix::libc::{atexit, cfmakeraw, fd_set, tcgetattr, tcsetattr, termios, timeval, TCSANOW};
+                use std::ptr::addr_of;
+
+                let og_term = termios { c_iflag: (0), c_line: (0), c_oflag: (0), c_lflag: (0), c_ispeed: (0), c_cflag: (0), c_ospeed: (0), c_cc: ([0 as u8; 32])};
+
+                unsafe {
+                    tcgetattr(0, addr_of!(og_term) as *mut termios);
+
+                    OG_ATTR = og_term;
+                    let new_term = og_term;
+                
+                    atexit(reset_term);
+                    cfmakeraw(addr_of!(new_term) as *mut termios);
+                    tcsetattr(0, TCSANOW, std::ptr::addr_of!(new_term) as *mut termios);   
+                }
+    
+                let d = timeval { tv_sec: (0), tv_usec: (0) };
+                let fds = nix::sys::select::FdSet::new();
+                spawn(move || {
+                       
+                });
+            }
+
+            #[cfg(windows)]
             fn create_input_thread(&mut self) {
                 use winapi::shared::windef::HWND;
                 use winapi::shared::windef::POINT;
@@ -471,7 +564,7 @@ mod terminal {
         const WH_KEYBOARD_LL: i32 = 13;
 
         #[cfg(windows)]
-        fn set_up_kb_hook() -> HHOOK {
+        fn set_up_kb_hook() -> winapi::shared::windef::HHOOK {
             use winapi::um::winuser::SetWindowsHookExA;
 
             #[expect(unused_assignments)]
@@ -552,7 +645,7 @@ mod game_logic {
 
     const TICK_DURATION: Duration = Duration::from_millis(600);
 
-    const PLAYER_ROTATION_SPEED: f32 = 0.1;
+    const PLAYER_ROTATION_SPEED: f32 = 0.025;
 
     const TWO_PI: f32 = 6.283185;
     const HALF_PI: f32 = 1.570795;
@@ -614,9 +707,9 @@ mod game_logic {
                       1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 
                       1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 
                       1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 
-                      1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 
-                      1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 
-                      1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 
+                      1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 
+                      1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
                     ]
                     .to_vec(),
                 topography_y: 10,
@@ -800,8 +893,15 @@ mod game_logic {
 
                         // Hit the same ray for dx amount
                         for i in 0..(dx + 1.) as i32 {
-                            let up = Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy) * 1.2) };
-                            let down = Vec2 { x: (ray_line + i as f32), y: (1.8 * (output.get_screen_dim().y as f32 - (ray_distance * dy))) };
+                            let up   = Vec2 { 
+                                x: (ray_line + i as f32),
+                                y: (0. + (ray_distance * dy)) 
+                            };
+
+                            let down = Vec2 { 
+                                x: (ray_line + i as f32),
+                                y: ((output.get_screen_dim().y as f32 - (ray_distance * dy * 0.5))) 
+                            };
     
                             if up.y > down.y {
                                 break;
@@ -995,8 +1095,8 @@ mod game_logic {
 fn main() {
     use std::thread::sleep;
     use std::time::Duration;
-
-    let input = terminal::input::Hook::new();
+    
+    // let input = terminal::input::Hook::new();
     let mut render = terminal::output::Renderer::new();
     let mut game = game_logic::Game::new();
 
@@ -1005,13 +1105,13 @@ fn main() {
         render.update();
         game.update(
             &mut render,
-            input.get_key(),
+            69,
             game_logic::ViewMode::Mode3d);
 
         render.render();
 
-        if input.get_key() == terminal::input::keys::KEY_X {
-            break;
-        }
+        // if input.get_key() == terminal::input::keys::KEY_X {
+        //    break;
+        // }
     }
 }

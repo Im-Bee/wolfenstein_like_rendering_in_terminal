@@ -5,8 +5,12 @@ edition = "2021"
 
 [dependencies]
 derivative = "2.2.0"
+postgres = "0.19.10"
 rand = "0.8"
+select = "0.6.0"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "consoleapi", "processenv", "errhandlingapi"] }
 
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29.0" }
