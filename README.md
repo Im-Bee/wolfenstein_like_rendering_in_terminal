@@ -1,1 +1,1 @@
-Compile with command ```cargo --release``` for the camera output.
+Compile with command ```cargo <build/run> --release``` for the camera output.
