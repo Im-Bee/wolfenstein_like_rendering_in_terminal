@@ -305,7 +305,7 @@ mod terminal
                     y: 0,
                 });
 
-                println!("{} {}", self.get_screen_dim().x, self.get_screen_dim().y);
+                // println!("{} {}", self.get_screen_dim().x, self.get_screen_dim().y);
             }
         }
         
@@ -379,8 +379,7 @@ mod terminal
             unsafe { 
                 if GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT), &mut csbi) == 0 
                 {
-                    panic!("Cannot get console info in winapi,"
-                           "GetLastError() returned {err_code}", 
+                    panic!("Cannot get console info in winapi, GetLastError() returned {err_code}", 
                            err_code = crate::windows_errors::get_last_error());
                 }
             }
@@ -401,8 +400,7 @@ mod terminal
             unsafe { 
                 if SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT), COORD { X: (dim.x), Y: (dim.y) }) == 0 
                 {
-                    panic!("Cannot set cursor positon in winapi,"
-                           "GetLastError() returned {err_code}", 
+                    panic!("Cannot set cursor positon in winapi, GetLastError() returned {err_code}", 
                            err_code = crate::windows_errors::get_last_error());
                 }
             }
@@ -420,11 +418,10 @@ mod terminal
                     GetStdHandle(STD_OUTPUT), 
                     arr_ptr as *const c_void,
                     arr_size as u32,
-                    null_mut(),
-                    null_mut()) == 0 
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut()) == 0 
                 {
-                    panic!("Cannot set cursor positon in winapi,"
-                           "GetLastError() returned {err_code}", 
+                    panic!("Cannot set cursor positon in winapi, GetLastError() returned {err_code}", 
                            err_code = crate::windows_errors::get_last_error());
                 }
             }
@@ -437,8 +434,9 @@ mod terminal
         use std::sync::Arc;
         use std::sync::atomic;
         use std::ptr::null_mut;
-        use nix::libc::termios;
         use std::thread::spawn;
+        #[cfg(unix)]
+        use nix::libc::termios;
 
         #[cfg(unix)]
         pub mod keys 
@@ -623,7 +621,7 @@ mod terminal
             use winapi::um::winuser::SetWindowsHookExA;
 
             #[expect(unused_assignments)]
-            let mut r: HHOOK = null_mut();
+            let mut r: winapi::shared::windef::HHOOK = null_mut();
 
             unsafe {
                 r = SetWindowsHookExA(
@@ -668,14 +666,13 @@ mod terminal
         }
 
         #[cfg(windows)]
-        fn end_kb_hook(hk: HHOOK) 
+        fn end_kb_hook(hk: winapi::shared::windef::HHOOK) 
         {
             use winapi::um::winuser::UnhookWindowsHookEx;
 
             unsafe {
                 if UnhookWindowsHookEx(hk) == 0 {
-                    panic!("Couldn't unhook keyboard hook in winapi,"
-                           "GetLastError() returned {err_code}", 
+                    panic!("Couldn't unhook keyboard hook in winapi, GetLastError() returned {err_code}", 
                            err_code = crate::windows_errors::get_last_error());
                 }
             }
