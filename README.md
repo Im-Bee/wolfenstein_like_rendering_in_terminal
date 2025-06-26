@@ -1,1 +1,1 @@
-Comiple as ```cargo --release``` for the camera output.
+Compile with command ```cargo --release``` for the camera output.
