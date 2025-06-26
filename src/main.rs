@@ -78,49 +78,43 @@ mod terminal
 
             pub fn draw_point_unnormalized(&mut self,
                                            pos: Vec2<i32>,
-                                           ch: u8) {
-
+                                           ch: u8) 
+            {
                 if !self.check_if_in_boundries(pos) {
                     return;
                 }
 
-                self.swap_chain[BACK_INDEX]
-                    [(self.screen_dimensions.x as i32 * pos.y + pos.x) as usize] = ch;
+                self.swap_chain[BACK_INDEX][(self.screen_dimensions.x as i32 * pos.y + pos.x) as usize] = ch;
             }
 
-            pub fn draw_point(
-                &mut self,
-                mut pos: Vec2<i32>,
-                ch: u8) {
-
+            pub fn draw_point(&mut self,
+                              mut pos: Vec2<i32>,
+                              ch: u8) 
+            {
                 // Normialize
                 pos.y /= 2;
 
                 self.draw_point_unnormalized(pos, ch);
             }
 
-            pub fn draw_dot(
-                &mut self,
-                mut pos: Vec2<f32>,
-                ch: u8) {
+            pub fn draw_dot(&mut self,
+                            mut pos: Vec2<f32>,
+                            ch: u8) 
+            {
+                self.draw_line(Vec2 { x: (pos.x + 3.), y: (pos.y) },
+                               Vec2 { x: (pos.x - 3.), y: (pos.y) },
+                               ch);
 
-                self.draw_line(
-                    Vec2 { x: (pos.x + 3.), y: (pos.y) },
-                    Vec2 { x: (pos.x - 3.), y: (pos.y) },
-                    ch);
-
-                self.draw_line(
-                    Vec2 { x: (pos.x), y: (pos.y + 3.) },
-                    Vec2 { x: (pos.x), y: (pos.y - 3.) },
-                    ch);
+                self.draw_line(Vec2 { x: (pos.x), y: (pos.y + 3.) },
+                               Vec2 { x: (pos.x), y: (pos.y - 3.) },
+                               ch);
             }
 
-            pub fn draw_line(
-                &mut self,
-                mut pos0: Vec2<f32>,
-                mut pos1: Vec2<f32>,
-                ch: u8) {
-
+            pub fn draw_line(&mut self,
+                             mut pos0: Vec2<f32>,
+                             mut pos1: Vec2<f32>,
+                             ch: u8) 
+            {
                 let mut steep = false;
 
                 if (pos0.x - pos1.x).abs() < (pos0.y - pos1.y).abs() {
@@ -140,7 +134,8 @@ mod terminal
                 let mut error: f32 = 0.0;
                 let mut y = pos0.y as i32;
 
-                for x in pos0.x as i32..pos1.x as i32 {
+                for x in pos0.x as i32..pos1.x as i32 
+                {
                     if steep {
                         self.draw_point(Vec2 { x: (y), y: (x) }, ch);
                     }
@@ -162,85 +157,100 @@ mod terminal
                 }
             }
 
-            pub fn update(&mut self) {
+            pub fn update(&mut self) 
+            {
                 self.resize();
                 self.clear_whole_screen();
                 // TODO: self.update_objs();
             }
 
-            pub fn render(&mut self) {
+            pub fn render(&mut self) 
+            {
                 self.swap_screens();
                 self.render_frame();
             }
 
-            pub fn get_screen_dim(&self) -> &Vec2<i16> {
+            pub fn get_screen_dim(&self) -> &Vec2<i16> 
+            {
                 &self.screen_dimensions
             }
 
             #[inline]
-            fn get_front_screen(&mut self) -> &mut Screen {
+            fn get_front_screen(&mut self) -> &mut Screen 
+            {
                 &mut self.swap_chain[FRONT_INDEX]
             }
 
             #[inline]
-            fn get_back_screen(&mut self) -> &mut Screen {
+            fn get_back_screen(&mut self) -> &mut Screen 
+            {
                 &mut self.swap_chain[BACK_INDEX]
             }
 
             #[inline]
-            fn check_if_in_boundries(&self, pos: Vec2<i32>) -> bool {
+            fn check_if_in_boundries(&self, pos: Vec2<i32>) -> bool 
+            {
                 if (pos.x >= self.screen_dimensions.x as i32) ||
-                    (pos.y >= self.screen_dimensions.y as i32) ||
-                    (pos.x < 0) || (pos.y < 0) {
-                        return false;
+                   (pos.y >= self.screen_dimensions.y as i32) ||
+                   (pos.x < 0) || (pos.y < 0) 
+                {
+                    return false;
                 }
-                else {
+                else 
+                {
                     return true;
                 }
             }
 
-            fn resize(&mut self) {
+            fn resize(&mut self) 
+            {
                 self.screen_dimensions = get_dimensions();
                 let len = self.screen_dimensions.x as usize * self.screen_dimensions.y as usize;
 
                 if len != self.get_front_screen().len() || 
-                    len != self.get_back_screen().len() {
-                        self.get_back_screen().resize(len, CHAR_EMPTY);
-                        self.get_front_screen().resize(len, CHAR_EMPTY);
+                   len != self.get_back_screen().len() 
+                {
+                    self.get_back_screen().resize(len, CHAR_EMPTY);
+                    self.get_front_screen().resize(len, CHAR_EMPTY);
 
-                        self.force_paint_whole_screen();
-                        self.swap_screens();
-                        self.clear_whole_screen();
+                    self.force_paint_whole_screen();
+                    self.swap_screens();
+                    self.clear_whole_screen();
                 }
             }
 
             #[inline]
-            fn clear_whole_screen(&mut self) {
+            fn clear_whole_screen(&mut self) 
+            {
                 for i in self.get_back_screen().iter_mut() {
                     *i = CHAR_EMPTY;
                 }
             }
 
             #[inline]
-            fn force_paint_whole_screen(&mut self) {
+            fn force_paint_whole_screen(&mut self) 
+            {
                 for i in self.get_back_screen().iter_mut() {
                     *i = 1;
                 }
             }
 
             #[inline]
-            fn blackout_whole_screen(&mut self) {
+            fn blackout_whole_screen(&mut self) 
+            {
                 for i in self.get_back_screen().iter_mut() {
                     *i = BLACK_BOX_CHAR;
                 }
             }
 
             #[inline]
-            fn swap_screens(&mut self) {
+            fn swap_screens(&mut self) 
+            {
                 self.swap_chain.swap(FRONT_INDEX, BACK_INDEX);
             }
 
-            fn render_frame(&mut self) {
+            fn render_frame(&mut self) 
+            {
                 const INVALID_ANCHOR: usize = usize::max_value();
                 let d = &self.screen_dimensions;
                 let mut anchor: usize = INVALID_ANCHOR;
@@ -256,42 +266,41 @@ mod terminal
                         y: 0,
                     });
 
-                for i in 0..self.swap_chain[FRONT_INDEX].len() {
+                for i in 0..self.swap_chain[FRONT_INDEX].len() 
+                {
                     if (anchor == INVALID_ANCHOR) && 
-                        (self.swap_chain[FRONT_INDEX][i] != self.swap_chain[BACK_INDEX][i]) {
+                       (self.swap_chain[FRONT_INDEX][i] != self.swap_chain[BACK_INDEX][i]) 
+                    {
                             anchor = i;
                     }
 
                     if (anchor != INVALID_ANCHOR) &&
-                        (self.swap_chain[FRONT_INDEX][i] == self.swap_chain[BACK_INDEX][i]) {
-                            set_cursor_position(Vec2 
-                                { 
-                                    x: anchor as i16 % d.x,  
-                                    y: anchor as i16 / d.x,
-                                });
+                       (self.swap_chain[FRONT_INDEX][i] == self.swap_chain[BACK_INDEX][i]) 
+                    {
+                            set_cursor_position(Vec2 { 
+                                x: anchor as i16 % d.x,  
+                                y: anchor as i16 / d.x,
+                            });
 
-                            output_array(
-                                &self.swap_chain[FRONT_INDEX][anchor],
-                                (i - anchor) as i16);
+                            output_array(&self.swap_chain[FRONT_INDEX][anchor],
+                                         (i - anchor) as i16);
 
-                            set_cursor_position(Vec2 
-                                { 
-                                    x: 0,
-                                    y: 0,
-                                });
+                            set_cursor_position(Vec2 { 
+                                x: 0,
+                                y: 0,
+                            });
 
                             anchor = INVALID_ANCHOR;
                     }
                 }
 
-                if anchor != INVALID_ANCHOR {
-                    output_array(
-                        &self.swap_chain[FRONT_INDEX][anchor],
-                        (self.swap_chain[FRONT_INDEX].len() - 1 - anchor) as i16);
+                if anchor != INVALID_ANCHOR 
+                {
+                    output_array(&self.swap_chain[FRONT_INDEX][anchor],
+                                 (self.swap_chain[FRONT_INDEX].len() - 1 - anchor) as i16);
                 }
 
-                set_cursor_position(Vec2 
-                { 
+                set_cursor_position(Vec2 { 
                     x: 0,
                     y: 0,
                 });
@@ -301,17 +310,21 @@ mod terminal
         }
         
         #[cfg(unix)]
-        pub fn get_dimensions() -> Vec2<i16> {
+        pub fn get_dimensions() -> Vec2<i16> 
+        {
             use nix::libc::{winsize, ioctl, STDOUT_FILENO, TIOCGWINSZ};
 
             let mut r: Vec2<i16> = Vec2 { x: 0, y: 0 };
 
             unsafe {
-                let win: winsize = winsize { ws_row: (0), ws_col: (0), ws_xpixel: (0), ws_ypixel: (0) };
+                let win: winsize = winsize { ws_row: (0), 
+                                             ws_col: (0),
+                                             ws_xpixel: (0),
+                                             ws_ypixel: (0) };
 
                 let res = ioctl(STDOUT_FILENO, TIOCGWINSZ, &win as *const winsize);
                 if res == 0 {
-                    r.y = win.ws_row as i16;
+                    r.y = win.ws_row as i16 * 2;
                     r.x = win.ws_col as i16;
                 }
                 else {
@@ -323,7 +336,8 @@ mod terminal
         }
 
         #[cfg(unix)]
-        pub fn set_cursor_position(dim: Vec2<i16>) {
+        pub fn set_cursor_position(dim: Vec2<i16>) 
+        {
             use nix::libc::c_int;
             use std::io::{stdout, Write};
             
@@ -332,7 +346,8 @@ mod terminal
         }
 
         #[cfg(unix)]
-        pub fn output_array(arr_ptr: *const u8, arr_size: i16) {
+        pub fn output_array(arr_ptr: *const u8, arr_size: i16) 
+        {
             use nix::libc::{c_void, write};
             use std::{io::stdout, os::unix::io::AsRawFd};
             
@@ -341,7 +356,8 @@ mod terminal
         }
 
         #[cfg(windows)]
-        pub fn get_dimensions() -> Vec2<i16> {
+        pub fn get_dimensions() -> Vec2<i16> 
+        {
             use winapi::um::processenv::GetStdHandle;
             use winapi::um::wincon::GetConsoleScreenBufferInfo;
             use winapi::um::wincon::CONSOLE_SCREEN_BUFFER_INFO;
@@ -360,48 +376,41 @@ mod terminal
                     dwMaximumWindowSize: COORD { X: (-1), Y: (-1) },
             };
     
-            #[cfg(debug_assertions)]
-            {
-                return Vec2 { x: 10, y: 10 };
-            }
-
             unsafe { 
-                if GetConsoleScreenBufferInfo(
-                    GetStdHandle(STD_OUTPUT),
-                    &mut csbi) == 0 {
-                    panic!("Cannot get console info in winapi,\
-                        GetLastError() returned {err_code}", 
-                        err_code = crate::windows_errors::get_last_error());
+                if GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT), &mut csbi) == 0 
+                {
+                    panic!("Cannot get console info in winapi,"
+                           "GetLastError() returned {err_code}", 
+                           err_code = crate::windows_errors::get_last_error());
                 }
-
             }
 
-            Vec2 { x: csbi.dwSize.X, y: csbi.dwSize.Y }
+            Vec2 { x: csbi.dwSize.X, y: csbi.dwSize.Y * 2 }
         }
 
         #[cfg(windows)]
         const STD_OUTPUT: u32 = -11_i32 as u32;
 
         #[cfg(windows)]
-        fn set_cursor_position(dim: Vec2<i16>) {
+        fn set_cursor_position(dim: Vec2<i16>) 
+        {
             use winapi::um::processenv::GetStdHandle; 
             use winapi::um::wincon::SetConsoleCursorPosition;
             use winapi::um::wincon::COORD;
 
             unsafe { 
-                if SetConsoleCursorPosition(
-                    GetStdHandle(STD_OUTPUT),
-                    COORD { X: (dim.x), Y: (dim.y) }) == 0 {
-                    panic!("Cannot set cursor positon in winapi,\
-                        GetLastError() returned {err_code}", 
-                        err_code = crate::windows_errors::get_last_error());
+                if SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT), COORD { X: (dim.x), Y: (dim.y) }) == 0 
+                {
+                    panic!("Cannot set cursor positon in winapi,"
+                           "GetLastError() returned {err_code}", 
+                           err_code = crate::windows_errors::get_last_error());
                 }
-
             }
         }
 
         #[cfg(windows)]
-        fn output_array(arr_ptr: *const u8, arr_size: i16) {
+        fn output_array(arr_ptr: *const u8, arr_size: i16) 
+        {
             use winapi::ctypes::c_void;
             use winapi::um::consoleapi::WriteConsoleA;
             use winapi::um::processenv::GetStdHandle;
@@ -412,16 +421,18 @@ mod terminal
                     arr_ptr as *const c_void,
                     arr_size as u32,
                     null_mut(),
-                    null_mut()) == 0 {
-                    panic!("Cannot wirte to console in winapi,\
-                        GetLastError() returned {err_code}",
-                        err_code = crate::windows_errors::get_last_error());
+                    null_mut()) == 0 
+                {
+                    panic!("Cannot set cursor positon in winapi,"
+                           "GetLastError() returned {err_code}", 
+                           err_code = crate::windows_errors::get_last_error());
                 }
             }
         }
     }
 
-    pub mod input {
+    pub mod input 
+    {
         use std::sync::atomic::Ordering;
         use std::sync::Arc;
         use std::sync::atomic;
@@ -430,7 +441,8 @@ mod terminal
         use std::thread::spawn;
 
         #[cfg(unix)]
-        pub mod keys {
+        pub mod keys 
+        {
             pub type KEY = u32;
 
             pub const KEY_X: KEY = 88;
@@ -444,7 +456,8 @@ mod terminal
         }
 
         #[cfg(windows)]
-        pub mod keys {
+        pub mod keys 
+        {
             pub type KEY = u32;
 
             pub const KEY_X: KEY = 88;
@@ -458,10 +471,18 @@ mod terminal
         }
 
         #[cfg(unix)]
-        static mut OG_ATTR: nix::libc::termios = termios { c_iflag: (0), c_line: (0), c_oflag: (0), c_lflag: (0), c_ispeed: (0), c_cflag: (0), c_ospeed: (0), c_cc: ([0 as u8; 32])};
+        static mut OG_ATTR: nix::libc::termios = termios { c_iflag: (0), 
+                                                           c_line: (0),
+                                                           c_oflag: (0),
+                                                           c_lflag: (0),
+                                                           c_ispeed: (0),
+                                                           c_cflag: (0),
+                                                           c_ospeed: (0),
+                                                           c_cc: ([0 as u8; 32]) };
             
         #[cfg(unix)]
-        extern "C" fn reset_term() {
+        extern "C" fn reset_term() 
+        {
             use nix::libc::{ tcsetattr, TCSANOW };
 
             unsafe {
@@ -469,13 +490,16 @@ mod terminal
             }
         }
 
-        pub struct Hook {
+        pub struct Hook 
+        {
             key: Arc<atomic::AtomicU32>,
             thread_switch: Arc<atomic::AtomicBool>,
         }
 
-        impl Hook {
-            pub fn new() -> Hook {
+        impl Hook 
+        {
+            pub fn new() -> Hook 
+            {
                 let mut r = Hook {
                     key: (Arc::new(atomic::AtomicU32::new((keys::KEY_UP).into()))),
                     thread_switch: Arc::new(atomic::AtomicBool::new(true.into())),
@@ -485,20 +509,30 @@ mod terminal
                 return r;
             }
 
-            pub fn end(&mut self) {
+            pub fn end(&mut self) 
+            {
                 self.thread_switch.store(false, Ordering::Relaxed);
             }
 
-            pub fn get_key(&self) -> keys::KEY {
+            pub fn get_key(&self) -> keys::KEY 
+            {
                 self.key.load(Ordering::Relaxed)
             }
 
             #[cfg(unix)]
-            fn create_input_thread(&mut self) {
+            fn create_input_thread(&mut self) 
+            {
                 use nix::libc::{atexit, cfmakeraw, fd_set, tcgetattr, tcsetattr, termios, timeval, TCSANOW};
                 use std::ptr::addr_of;
 
-                let og_term = termios { c_iflag: (0), c_line: (0), c_oflag: (0), c_lflag: (0), c_ispeed: (0), c_cflag: (0), c_ospeed: (0), c_cc: ([0 as u8; 32])};
+                let og_term = termios { c_iflag: (0), 
+                                        c_line: (0),
+                                        c_oflag: (0),
+                                        c_lflag: (0),
+                                        c_ispeed: (0), 
+                                        c_cflag: (0),
+                                        c_ospeed: (0),
+                                        c_cc: ([0 as u8; 32]) };
 
                 unsafe {
                     tcgetattr(0, addr_of!(og_term) as *mut termios);
@@ -683,7 +717,6 @@ mod game_logic
 
     pub struct Game 
     {
-        ticks: Instant,
         current_map: Map,
         main_player: MainPlayer,
         camera: Camera,
@@ -753,7 +786,6 @@ mod game_logic
             };
 
             Game {
-                ticks: Instant::now(),
                 current_map: new_map,
                 main_player: new_main_player,
                 camera: new_camera,
@@ -765,12 +797,6 @@ mod game_logic
                       input: keys::KEY,
                       mode: ViewMode) 
         {
-            let t = Instant::now();
-            let dt = (t - self.ticks).as_millis() / TICK_DURATION.as_millis();
-            if dt >= 1 {
-                self.ticks = t;
-            }
-            
             if input != keys::KEY_UP 
             {
                 let mut top_left = self.main_player.actor.position;
@@ -844,7 +870,7 @@ mod game_logic
             
             self.calculate_and_draw(output, &mode);
 
-            println!("PITCH: {:03.4} | COORD: [x: {:02.04}, y: {:02.04}]",
+            println!("YAW: {:03.4} | COORD: [x: {:02.04}, y: {:02.04}]",
                      self.main_player.actor.yaw,
                      self.main_player.actor.position.x,
                      self.main_player.actor.position.y);
@@ -860,7 +886,8 @@ mod game_logic
             // Preallocate variables for calculations
             let mut ray_line = 0.;
             let dx = output.get_screen_dim().x as f32 / self.camera.fov;
-            let dy = output.get_screen_dim().y as f32 / (self.camera.max_visible_distance as f32 * self.current_map.sqare_width);
+            let dy = output.get_screen_dim().y as f32 
+                     / (self.camera.max_visible_distance as f32 * self.current_map.sqare_width);
             let mut which_axis: Axis = Axis::OnX;
             let mut ray_distance: f32;
 
@@ -876,7 +903,8 @@ mod game_logic
 
                     let topography_index = (self.current_map.topography_x * current_square.y + current_square.x) as usize; 
                     if topography_index >= self.current_map.topography.len() || 
-                        self.current_map.topography[topography_index] == 1 {
+                       self.current_map.topography[topography_index] == 1 
+                    {
                             // Hit!
                             break;
                     }
@@ -904,16 +932,14 @@ mod game_logic
                     ViewMode::Mode2d => {
                         match which_axis {
                             Axis::OnX => {
-                                output.draw_line(
-                                    self.main_player.actor.position,
-                                    current_ray_pos,
-                                    BLACK_BOX_CHAR);
+                                output.draw_line(self.main_player.actor.position,
+                                                 current_ray_pos,
+                                                 BLACK_BOX_CHAR);
                             }
                             Axis::OnY => {
-                                output.draw_line(
-                                    self.main_player.actor.position,
-                                    current_ray_pos,
-                                    STRIP_BOX_CHAR);
+                                output.draw_line(self.main_player.actor.position,
+                                                 current_ray_pos,
+                                                 STRIP_BOX_CHAR);
                             }
                         }
                         // output.draw_dot(y_res, BLACK_BOX_CHAR);
@@ -927,12 +953,12 @@ mod game_logic
                         {
                             let up = Vec2 { 
                                 x: (ray_line + i as f32),
-                                y: (0. + (ray_distance * dy)) 
+                                y: (ray_distance * dy * 0.75) 
                             };
 
                             let down = Vec2 { 
                                 x: (ray_line + i as f32),
-                                y: ((output.get_screen_dim().y as f32 - (ray_distance * dy * 0.5))) 
+                                y: (output.get_screen_dim().y as f32 - (ray_distance * dy * 0.5)) 
                             };
     
                             if up.y > down.y {
@@ -942,17 +968,15 @@ mod game_logic
                             match which_axis 
                             {
                                 Axis::OnX => {
-                                    output.draw_line(
-                                        up,
-                                        down,
-                                        BLACK_BOX_CHAR);
+                                    output.draw_line(up,
+                                                     down,
+                                                     BLACK_BOX_CHAR);
                                 }
 
                                 Axis::OnY => {
-                                    output.draw_line(
-                                        up,
-                                        down,
-                                        STRIP_BOX_CHAR);
+                                    output.draw_line(up,
+                                                     down,
+                                                     STRIP_BOX_CHAR);
                                 }
                             }
                         }
@@ -967,25 +991,26 @@ mod game_logic
                             match which_axis 
                             {
                                 Axis::OnX => {
-                                    output.draw_line(
-                                        Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy)) },
-                                        Vec2 { x: (ray_line + i as f32), y: (output.get_screen_dim().y as f32 * 1.15 - (ray_distance * dy)) },
-                                        BLACK_BOX_CHAR);
-                                    output.draw_line(
-                                        self.main_player.actor.position,
-                                        current_ray_pos,
-                                        BLACK_BOX_CHAR);
+                                    output.draw_line(Vec2 { x: (ray_line + i as f32), y: (ray_distance * dy * 0.75) },
+                                                     Vec2 { x: (ray_line + i as f32), 
+                                                            y: (output.get_screen_dim().y as f32
+                                                                - (ray_distance * dy * 0.5)) 
+                                                     },
+                                                     BLACK_BOX_CHAR);
+                                    output.draw_line(self.main_player.actor.position,
+                                                     current_ray_pos,
+                                                     BLACK_BOX_CHAR);
                                 }
 
                                 Axis::OnY => {
-                                    output.draw_line(
-                                        Vec2 { x: (ray_line + i as f32), y: (0. + (ray_distance * dy)) },
-                                        Vec2 { x: (ray_line + i as f32), y: (output.get_screen_dim().y as f32 * 1.15 - (ray_distance * dy)) },
-                                        STRIP_BOX_CHAR);
-                                    output.draw_line(
-                                        self.main_player.actor.position,
-                                        current_ray_pos,
-                                        STRIP_BOX_CHAR);
+                                    output.draw_line(Vec2 { x: (ray_line + i as f32), y: (ray_distance * dy) },
+                                                     Vec2 { x: (ray_line + i as f32), 
+                                                            y: (output.get_screen_dim().y as f32
+                                                                - (ray_distance * dy)) },
+                                                     STRIP_BOX_CHAR);
+                                    output.draw_line(self.main_player.actor.position,
+                                                     current_ray_pos,
+                                                     STRIP_BOX_CHAR);
                                 }
                             }
                         }
@@ -1028,7 +1053,7 @@ mod game_logic
                 x_boundry: &f32,
                 y_boundry: &f32) -> (Vec2<f32>, Axis) 
     {
-        let error = 0.05;
+        let error = 0.0001;
 
         // Preallocate variables
         let mut a: f32;
@@ -1105,7 +1130,8 @@ mod game_logic
 
         // Decide which result is correct and fits in boundries
         if y_res.x >= boundry_top_left.x &&
-            y_res.x <= boundry_top_left.x + x_boundry {
+           y_res.x <= boundry_top_left.x + x_boundry 
+        {
                 final_pos = y_res;
                 final_axis = Axis::OnY;
         }
@@ -1147,7 +1173,7 @@ fn main()
         sleep(Duration::from_millis(50));
         render.update();
         game.update(&mut render,
-                    70,
+                    69,
                     game_logic::ViewMode::Mode3d);
 
         render.render();
