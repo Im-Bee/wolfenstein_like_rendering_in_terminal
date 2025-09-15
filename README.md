@@ -4,6 +4,7 @@ Project made to learn about raycast style rendering with a unique twist: rendere
 Uses operating system API to draw the picture (rendered with characters in terminal using lines), on Windows there is also a working (commented out) support for input, allowing to move and rotate within the map.
 
 ![screenshot](https://github.com/Im-Bee/wolfenstein_like_rendering_in_terminal/blob/main/Docs/ReadMeScreenshot.jpg?raw=true)
+![screenshot](https://github.com/Im-Bee/wolfenstein_like_rendering_in_terminal/blob/main/Docs/ReadMeScreenshot2.jpg?raw=true)
 
 ## Build
 
