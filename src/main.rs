@@ -212,10 +212,10 @@ mod terminal
                 {
                     self.get_back_screen().resize(len, CHAR_EMPTY);
                     self.get_front_screen().resize(len, CHAR_EMPTY);
-
-                    self.force_paint_whole_screen();
-                    self.swap_screens();
                     self.clear_whole_screen();
+
+                    self.swap_screens();
+                    self.force_paint_whole_screen();
                 }
             }
 
@@ -1161,7 +1161,7 @@ fn main()
     use std::thread::sleep;
     use std::time::Duration;
     
-    // let input = terminal::input::Hook::new();
+    //let input = terminal::input::Hook::new();
     let mut render = terminal::output::Renderer::new();
     let mut game = game_logic::Game::new();
 
@@ -1170,7 +1170,7 @@ fn main()
         sleep(Duration::from_millis(50));
         render.update();
         game.update(&mut render,
-                    69,
+                    69, // input.get_key(),
                     game_logic::ViewMode::Mode3d);
 
         render.render();
